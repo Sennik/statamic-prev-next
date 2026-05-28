@@ -1,0 +1,34 @@
+{
+    "name": "sennik/statamic-prev-next",
+    "description": "Adds previous/next navigation buttons to the entry edit toolbar in Statamic 6.",
+    "type": "statamic-addon",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Klaas Runia",
+            "email": "klaas.runia@sennik.nl"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "statamic/cms": "^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Sennik\\PrevNext\\": "src/"
+        }
+    },
+    "extra": {
+        "statamic": {
+            "name": "Prev/Next Entry Navigation",
+            "description": "Adds prev/next navigation buttons to the entry edit toolbar."
+        },
+        "laravel": {
+            "providers": [
+                "Sennik\\PrevNext\\ServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
