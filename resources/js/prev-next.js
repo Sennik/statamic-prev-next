@@ -98,7 +98,47 @@
         window.location.href = url;
     }
 
+    const STYLE_ID = 'sennik-prev-next-style';
+
+    function injectStyles() {
+        if (document.getElementById(STYLE_ID)) return;
+        const el = document.createElement('style');
+        el.id = STYLE_ID;
+        el.textContent = `
+            .sennik-pn-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 36px;
+                height: 36px;
+                padding: 0 .5rem;
+                border-radius: .375rem;
+                border: 1px solid rgb(229 231 235);
+                background: #fff;
+                color: rgb(75 85 99);
+            }
+            .sennik-pn-btn:not(:disabled):hover { background: rgb(243 244 246); }
+            .sennik-pn-counter {
+                font-size: .875rem;
+                color: rgb(75 85 99);
+                min-width: 60px;
+                text-align: center;
+                font-variant-numeric: tabular-nums;
+            }
+            .dark .sennik-pn-btn {
+                border-color: rgb(55 65 81);
+                background: rgb(31 41 55);
+                color: rgb(209 213 219);
+            }
+            .dark .sennik-pn-btn:not(:disabled):hover { background: rgb(55 65 81); }
+            .dark .sennik-pn-counter { color: rgb(156 163 175); }
+        `;
+        document.head.appendChild(el);
+    }
+
     function buildContainer(data) {
+        injectStyles();
+
         const root = document.createElement('div');
         root.className = ROOT_CLASS;
         root.setAttribute('data-prev-next', '');
@@ -108,17 +148,8 @@
             const btn = document.createElement('button');
             btn.type = 'button';
             const disabled = !target;
+            btn.className = 'sennik-pn-btn';
             btn.style.cssText = [
-                'display: inline-flex',
-                'align-items: center',
-                'justify-content: center',
-                'min-width: 36px',
-                'height: 36px',
-                'padding: 0 .5rem',
-                'border-radius: 0.375rem',
-                'border: 1px solid rgb(229 231 235)',
-                'background: white',
-                'color: rgb(75 85 99)',
                 'cursor: ' + (disabled ? 'not-allowed' : 'pointer'),
                 'opacity: ' + (disabled ? '0.4' : '1'),
             ].join(';');
@@ -130,8 +161,6 @@
                     e.preventDefault();
                     navigate(target.edit_url);
                 });
-                btn.addEventListener('mouseenter', () => { btn.style.background = 'rgb(243 244 246)'; });
-                btn.addEventListener('mouseleave', () => { btn.style.background = 'white'; });
             } else {
                 btn.disabled = true;
                 btn.title = isPrev ? t('no_previous') : t('no_next');
@@ -140,7 +169,7 @@
         };
 
         const counter = document.createElement('span');
-        counter.style.cssText = 'font-size: 0.875rem; color: rgb(75 85 99); min-width: 60px; text-align: center; font-variant-numeric: tabular-nums;';
+        counter.className = 'sennik-pn-counter';
         counter.textContent = t('position', { current: data.position, total: data.total });
 
         root.appendChild(makeBtn(data.prev, true));
