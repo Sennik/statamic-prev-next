@@ -5,7 +5,8 @@
 (function () {
     const ROOT_CLASS = 'sennik-prev-next-root';
     const ENTRY_PATH_RE = /\/cp\/collections\/([^\/]+)\/entries\/([^\/?#]+)/;
-    const DEBUG = true;
+    // Logt bij elke navigatie naar de console; stond aan in productie.
+    const DEBUG = false;
 
     function log() {
         if (DEBUG) console.log('[prev-next]', ...arguments);
@@ -38,7 +39,47 @@
         return getConfig('cpUrl', '/cp');
     }
 
+    // Per entry één keer ophalen. Zonder cache kost elke navigatie een extra
+    // HTTP-call NA het renderen van de pagina, en tot die terug is staat de
+    // toolbar zonder knoppen. Dat is het zichtbare "knoppen verdwijnen even".
+    const buurCache = new Map();
+
+    function cacheSleutel(route) {
+        return route.collection + '/' + route.entry;
+    }
+
+    /**
+     * Leidt een route af uit een edit_url van een buur, zodat we diens buren
+     * alvast kunnen ophalen terwijl de gebruiker nog kijkt.
+     */
+    function routeUitEditUrl(editUrl) {
+        try {
+            const pad = new URL(editUrl, window.location.origin).pathname;
+            const m = pad.match(ENTRY_PATH_RE);
+            if (!m) return null;
+            return { collection: decodeURIComponent(m[1]), entry: decodeURIComponent(m[2]) };
+        } catch {
+            return null;
+        }
+    }
+
+    /** Warmt de cache voor de vorige en volgende entry. Fouten zijn hier onschuldig. */
+    function prefetchBuren(data) {
+        for (const buur of [data.prev, data.next]) {
+            if (!buur?.edit_url) continue;
+            const route = routeUitEditUrl(buur.edit_url);
+            if (!route || buurCache.has(cacheSleutel(route))) continue;
+            fetchNeighbors(route).catch(() => {});
+        }
+    }
+
     async function fetchNeighbors(route) {
+        const sleutel = cacheSleutel(route);
+        if (buurCache.has(sleutel)) {
+            log('uit cache', sleutel);
+            return buurCache.get(sleutel);
+        }
+
         const url = getCpUrl() + '/prev-next/' + route.collection + '/' + route.entry;
         log('fetching', url);
         const res = await fetch(url, {
@@ -50,7 +91,10 @@
             },
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
+
+        const data = await res.json();
+        buurCache.set(sleutel, data);
+        return data;
     }
 
     function findToolbar() {
@@ -224,6 +268,9 @@
             targetToolbar.insertBefore(node, targetToolbar.firstChild);
             lastEntryKey = key;
             log('injected ✓ pos', data.position, '/', data.total);
+
+            // Volgende klik komt dan uit de cache in plaats van uit een fetch.
+            prefetchBuren(data);
         } catch (e) {
             console.error('[prev-next] failed:', e);
         } finally {
